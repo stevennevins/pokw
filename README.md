@@ -1,66 +1,27 @@
-## Foundry
+# Proof of Kernel Work (PoKW)
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## Introduction
+Proof of Kernel Work (PoKW) is an innovative consensus mechanism designed as a variant of the traditional Proof of Work (PoW). It aims to democratize the mining process and enhance energy efficiency by focusing participation on a select group of nodes. This approach not only reduces the energy demands typically associated with blockchain mining but also maintains robust security and network integrity.
 
-Foundry consists of:
+## Concept
+PoKW limits the mining race to a small, randomly selected subset of nodes, known as the "kernel" of nodes. This method significantly decreases the energy required for mining activities by reducing the number of nodes that need to perform intensive computational tasks.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## Mechanisms
 
-## Documentation
+### Dynamic White List
+- A blockchain-authenticated list that includes public keys of nodes eligible to participate in the mining process. This list ensures that only authorized nodes can contribute to the network's consensus mechanism.
 
-https://book.getfoundry.sh/
+## Security Enhancements in Leader Election
+To enhance the security of the leader election process, PoKW incorporates the transaction gas price (`tx.gasprice`) into the entropy used for randomness. This inclusion is crucial because it adds an unpredictable, yet economically driven factor to the randomness. During periods of high competition, when nodes rush to submit their solutions, the gas price can fluctuate significantly. This fluctuation reflects the competitive nature of the transactions, as nodes bid higher to prioritize their submissions. By integrating `tx.gasprice`, PoKW leverages these economic and competitive behaviors to deter nodes from attempting to influence the leader selection process through predictable or manipulative actions, thereby maintaining fairness and security in a competitive environment.
 
-## Usage
+## Benefits
 
-### Build
+### Energy Efficiency
+- By reducing the number of nodes involved in the mining process, PoKW significantly lowers the energy consumption compared to traditional PoW systems.
 
-```shell
-$ forge build
-```
+### Security
+- Despite the reduced number of participating nodes, PoKW maintains a secure network environment, ensuring that the integrity and security of the blockchain are not compromised.
 
-### Test
+## Conclusion
+PoKW represents a forward-thinking approach to consensus mechanisms, addressing the critical challenges of energy consumption and security in blockchain networks. It stands as a testament to the potential for innovation in blockchain technology, paving the way for more sustainable and inclusive blockchain operations.
 
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```

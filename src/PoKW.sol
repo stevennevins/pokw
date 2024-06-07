@@ -43,9 +43,12 @@ contract PoKW {
     function submitWork(uint256 _work) external onlyWhitelisted {
         require(
             block.timestamp >= leadershipEndTime,
-            "Current leader's term is not over"
+            "Current leaders term is not over"
         );
 
+        /// The last task after a leader's term ends should record a prevrandao value
+        /// which then gets used as input here so the race doesn't begin until after
+        /// the leader's term ends
         uint256 workHash = uint256(
             keccak256(abi.encodePacked(msg.sender, _work, nonce))
         );
@@ -62,7 +65,9 @@ contract PoKW {
         address node,
         uint256 work
     ) public view returns (bool) {
-        uint256 workHash = uint256(keccak256(abi.encodePacked(node, work)));
+        uint256 workHash = uint256(
+            keccak256(abi.encodePacked(node, work, nonce))
+        );
         return isValidWork(workHash);
     }
 
