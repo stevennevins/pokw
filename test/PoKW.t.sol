@@ -70,28 +70,4 @@ contract PoKWTest is Test {
         vm.prank(node);
         pokw.submitWork(500); // This should fail as the leadership term is not over
     }
-
-    function testExpApproximation() public {
-        // Test the exp function with a small positive value
-        int256 testValue1 = 1;
-        uint256 result1 = pokw.exp(testValue1);
-        uint256 expected1 = 2; // Approximate value of e^1 * 10^6 for precision
-        assertApproxEqRel(
-            result1,
-            expected1,
-            0.1e18,
-            "Exponential function approximation for e^1 is incorrect"
-        );
-
-        // Test the exp function with zero
-        int256 testValue3 = 0;
-        uint256 result3 = pokw.exp(testValue3);
-        uint256 expected3 = 1; // e^0 is 1, scaled by 10^6 for precision
-        assertApproxEqRel(
-            result3,
-            expected3,
-            0.1e18,
-            "Exponential function approximation for e^0 is incorrect"
-        );
-    }
 }

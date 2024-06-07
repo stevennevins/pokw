@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
+import {toWadUnsafe, wadMul, wadDiv, wadExp} from "../lib/solmate/src/utils/SignedWadMath.sol";
+
 contract PoKW {
     mapping(address => bool) public nodes;
     address[] public whitelistedNodes;
@@ -57,10 +59,10 @@ contract PoKW {
 
         emit WorkSubmitted(msg.sender, _work);
 
-        uint256 actualWorkPeriod = block.timestamp - leadershipEndTime;
+        int256 workWad = toWadUnsafe(block.timestamp - leadershipEndTime);
         electLeader();
 
-        adjustWork(actualWorkPeriod);
+        adjustWork(workWad);
 
         nonce++;
     }
@@ -115,48 +117,27 @@ contract PoKW {
             );
     }
 
-    function adjustWork(uint256 observedTime) internal {
-        uint256 work;
-        int256 observedTime = int256(observedTime);
-        int256 target = int256(TARGET_TIME);
-        if (observedTime > target) {
+    function adjustWork(int256 observedTimeWad) internal {
+        int256 workWad;
+        int256 targetWad = toWadUnsafe(TARGET_TIME);
+        int256 requiredWorkWad = toWadUnsafe(requiredWork);
+        if (observedTimeWad > targetWad) {
             // If the observed time is greater than the target time, decrease the required work
             // to make it easier to find a valid work hash. Using exponential adjustment similar to EIP-1559.
-            work = requiredWork * exp((target - observedTime) / target);
+            workWad = wadMul(
+                requiredWorkWad,
+                wadExp(wadDiv(targetWad - observedTimeWad, targetWad))
+            );
         } else {
             // If the observed time is less than the target time, increase the required work
             // to make it harder to find a valid work hash. Using exponential adjustment similar to EIP-1559.
-            work = requiredWork * exp((observedTime - target) / target);
+            workWad = wadMul(
+                requiredWorkWad,
+                wadExp(wadDiv(observedTimeWad - targetWad, targetWad))
+            );
         }
-        requiredWork = work / 1e18;
-        emit RequiredWorkUpdated(work);
-    }
-
-    /**
-     * @dev Approximates the exponential function using a Taylor series expansion.
-     * @param x The exponent to use in the calculation.
-     * @return The approximate value of e^x.
-     */
-    function exp(int256 x) public pure returns (uint256) {
-        // The number of terms to include in the Taylor series expansion
-        uint256 numTerms = 10;
-        uint256 factorial = 1;
-        // The result of the series expansion, starting with the first term which is 1
-        // Adding 18 decimals of precision to the result
-        uint256 result = 1 * 1e18;
-        // The power of x, starting with x^1, scaled by 1e18 for precision
-        int256 powerOfX = x * int256(1e18);
-
-        for (uint256 n = 1; n < numTerms; n++) {
-            // Add the current term to the result
-            result += uint256(powerOfX / int256(factorial));
-            // Update powerOfX to x^(n+1), maintaining precision
-            powerOfX *= x;
-            // Update factorial to (n+1)!
-            factorial *= (n + 1);
-        }
-
-        return result;
+        requiredWork = uint256(workWad) / 1e18;
+        emit RequiredWorkUpdated(requiredWork);
     }
 
     function updateRequiredWork(uint256 _newRequiredWork) external onlyOwner {
