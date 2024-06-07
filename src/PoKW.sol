@@ -78,7 +78,7 @@ contract PoKW {
     }
 
     function isValidWork(uint256 workHash) internal view returns (bool) {
-        return workHash < requiredWork;
+        return workHash > requiredWork;
     }
 
     function electLeader() internal {
@@ -118,26 +118,35 @@ contract PoKW {
     }
 
     function adjustWork(int256 observedTimeWad) internal {
-        int256 workWad;
+        int256 newWorkWad = calculateNewWorkWad(observedTimeWad);
+        requiredWork = uint256(newWorkWad) / 1e18;
+        emit RequiredWorkUpdated(requiredWork);
+    }
+
+    function calculateNewWorkWad(
+        int256 observedTimeWad
+    ) public view returns (int256) {
         int256 targetWad = toWadUnsafe(TARGET_TIME);
         int256 requiredWorkWad = toWadUnsafe(requiredWork);
+        int256 workWad;
+
         if (observedTimeWad > targetWad) {
             // If the observed time is greater than the target time, decrease the required work
-            // to make it easier to find a valid work hash. Using exponential adjustment similar to EIP-1559.
+            // to make it easier to find a valid work hash. Using exponential adjustment.
             workWad = wadMul(
                 requiredWorkWad,
                 wadExp(wadDiv(targetWad - observedTimeWad, targetWad))
             );
         } else {
             // If the observed time is less than the target time, increase the required work
-            // to make it harder to find a valid work hash. Using exponential adjustment similar to EIP-1559.
+            // to make it harder to find a valid work hash. Using exponential adjustment.
             workWad = wadMul(
                 requiredWorkWad,
-                wadExp(wadDiv(observedTimeWad - targetWad, targetWad))
+                wadExp(wadDiv(targetWad - observedTimeWad, targetWad))
             );
         }
-        requiredWork = uint256(workWad) / 1e18;
-        emit RequiredWorkUpdated(requiredWork);
+
+        return workWad;
     }
 
     function updateRequiredWork(uint256 _newRequiredWork) external onlyOwner {
