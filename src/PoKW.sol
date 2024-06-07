@@ -16,6 +16,7 @@ contract PoKW {
     event RequiredWorkUpdated(uint256 newRequiredWork);
 
     uint256 internal constant LEADERSHIP_DURATION = 7 days;
+    uint256 internal constant TARGET_TIME = 1 hours;
 
     constructor(uint256 _initialRequiredWork) {
         requiredWork = _initialRequiredWork;
@@ -56,7 +57,10 @@ contract PoKW {
 
         emit WorkSubmitted(msg.sender, _work);
 
+        uint256 actualWorkPeriod = block.timestamp - leadershipEndTime;
         electLeader();
+
+        adjustWork(actualWorkPeriod);
 
         nonce++;
     }
@@ -94,6 +98,9 @@ contract PoKW {
     );
 
     function getRandomNumber() internal view returns (uint256) {
+        /// Should switch to
+        /// priorityFee = min(tx.maxPriorityFeePerGas, tx.maxFeePerGas - block.baseFee)
+        /// actualTotalFee = min(tx.maxFeePerGas, block.baseFee + priorityFee)
         return
             uint256(
                 keccak256(
@@ -106,6 +113,50 @@ contract PoKW {
                     )
                 )
             );
+    }
+
+    function adjustWork(uint256 observedTime) internal {
+        uint256 work;
+        int256 observedTime = int256(observedTime);
+        int256 target = int256(TARGET_TIME);
+        if (observedTime > target) {
+            // If the observed time is greater than the target time, decrease the required work
+            // to make it easier to find a valid work hash. Using exponential adjustment similar to EIP-1559.
+            work = requiredWork * exp((target - observedTime) / target);
+        } else {
+            // If the observed time is less than the target time, increase the required work
+            // to make it harder to find a valid work hash. Using exponential adjustment similar to EIP-1559.
+            work = requiredWork * exp((observedTime - target) / target);
+        }
+        requiredWork = work / 1e18;
+        emit RequiredWorkUpdated(work);
+    }
+
+    /**
+     * @dev Approximates the exponential function using a Taylor series expansion.
+     * @param x The exponent to use in the calculation.
+     * @return The approximate value of e^x.
+     */
+    function exp(int256 x) public pure returns (uint256) {
+        // The number of terms to include in the Taylor series expansion
+        uint256 numTerms = 10;
+        uint256 factorial = 1;
+        // The result of the series expansion, starting with the first term which is 1
+        // Adding 18 decimals of precision to the result
+        uint256 result = 1 * 1e18;
+        // The power of x, starting with x^1, scaled by 1e18 for precision
+        int256 powerOfX = x * int256(1e18);
+
+        for (uint256 n = 1; n < numTerms; n++) {
+            // Add the current term to the result
+            result += uint256(powerOfX / int256(factorial));
+            // Update powerOfX to x^(n+1), maintaining precision
+            powerOfX *= x;
+            // Update factorial to (n+1)!
+            factorial *= (n + 1);
+        }
+
+        return result;
     }
 
     function updateRequiredWork(uint256 _newRequiredWork) external onlyOwner {
